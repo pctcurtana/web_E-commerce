@@ -34,11 +34,6 @@ class ProductSeeder extends Seeder
                 'stock_quantity' => 50,
                 'category_id' => $phoneCategory->id,
                 'featured_image' => 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&h=800&fit=crop&crop=center',
-                'images' => json_encode([
-                    'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&h=600&fit=crop&crop=center',
-                    'https://images.unsplash.com/photo-1695654389269-7c51d7b6c7b8?w=600&h=600&fit=crop&crop=center',
-                    'https://images.unsplash.com/photo-1512499617640-c74ae3a79d37?w=600&h=600&fit=crop&crop=center'
-                ]),
             ],
             [
                 'name' => 'Samsung Galaxy S24 Ultra 512GB',

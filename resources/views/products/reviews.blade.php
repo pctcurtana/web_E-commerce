@@ -70,23 +70,17 @@
                 
                 <!-- Rating Breakdown -->
                 <div class="flex-1 max-w-md">
-                    @php
-                        $ratingBreakdown = $product->approvedReviews->groupBy('rating')->map->count();
-                    @endphp
-                    @for($star = 5; $star >= 1; $star--)
-                        @php
-                            $count = $ratingBreakdown->get($star, 0);
-                            $percentage = $product->review_count > 0 ? ($count / $product->review_count) * 100 : 0;
-                        @endphp
+                    @foreach($ratingStats as $star => $count)
                         <div class="flex items-center space-x-2 mb-1">
                             <span class="text-sm text-gray-600 w-6">{{ $star }}</span>
                             <x-heroicon-s-star class="w-4 h-4 text-yellow-400" />
                             <div class="flex-1 bg-gray-200 rounded-full h-2">
-                                <div class="bg-yellow-400 h-2 rounded-full" style="width: {{ $percentage }}%"></div>
+                                <div class="bg-yellow-400 h-2 rounded-full transition-all duration-300" 
+                                     style="width: {{ $ratingPercentages[$star] }}%"></div>
                             </div>
-                            <span class="text-sm text-gray-500 w-8">{{ $count }}</span>
+                            <span class="text-sm text-gray-500 w-12 text-right">{{ $count }} ({{ $ratingPercentages[$star] }}%)</span>
                         </div>
-                    @endfor
+                    @endforeach
                 </div>
             </div>
         </div>
@@ -119,6 +113,22 @@
                                             <span class="ml-2 text-sm text-gray-500">{{ $review->created_at->format('d/m/Y H:i') }}</span>
                                         </div>
                                     </div>
+                                    @auth
+                                        @if($review->user_id === Auth::id())
+                                            <div class="flex space-x-2">
+                                                <a href="{{ route('products.show', $product->slug) }}#review-form" 
+                                                   class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                                                    <x-heroicon-o-pencil class="w-4 h-4 inline mr-1" />
+                                                    Sửa
+                                                </a>
+                                                <button onclick="deleteReview()" 
+                                                        class="text-red-600 hover:text-red-700 text-sm font-medium">
+                                                    <x-heroicon-o-trash class="w-4 h-4 inline mr-1" />
+                                                    Xóa
+                                                </button>
+                                            </div>
+                                        @endif
+                                    @endauth
                                 </div>
                                 @if($review->comment)
                                     <p class="text-gray-700 leading-relaxed">{{ $review->comment }}</p>
@@ -144,4 +154,53 @@
         @endif
     </div>
 </div>
+
+<script>
+    async function deleteReview() {
+        const result = await Swal.fire({
+            title: 'Xóa đánh giá?',
+            text: 'Bạn có chắc chắn muốn xóa đánh giá này không?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const response = await fetch(`{{ route('reviews.destroy', $product->slug) }}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                if (response.ok) {
+                    Swal.fire({
+                        title: 'Đã xóa!',
+                        text: 'Đánh giá của bạn đã được xóa.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = '{{ route("products.show", $product->slug) }}';
+                    });
+                } else {
+                    throw new Error('Failed to delete review');
+                }
+            } catch (error) {
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: 'Có lỗi xảy ra khi xóa đánh giá.',
+                    icon: 'error',
+                    confirmButtonColor: '#dc2626'
+                });
+            }
+        }
+    }
+</script>
+
 @endsection 

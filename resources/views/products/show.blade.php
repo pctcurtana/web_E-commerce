@@ -155,7 +155,69 @@
 
     <!-- Customer Reviews -->
     <div class="bg-white rounded-lg shadow-sm p-8 mb-12">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">Đánh giá từ khách hàng</h2>
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">Đánh giá từ khách hàng</h2>
+            @auth
+                <button class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                        id="review-button">
+                    <x-heroicon-o-star class="w-4 h-4 inline mr-1" />
+                    Viết đánh giá
+                </button>
+            @endauth
+        </div>
+
+        <!-- Review Form -->
+        @auth
+            <div id="review-form" class="hidden mb-8 p-6 bg-gray-50 rounded-lg">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Đánh giá sản phẩm</h3>
+                <form id="review-form-element" method="POST" action="">
+                    @csrf
+                    <div class="space-y-4">
+                        <!-- Rating -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Đánh giá của bạn *</label>
+                            <div class="flex items-center space-x-1" id="rating-stars">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <button type="button" 
+                                            class="star-rating text-gray-300 hover:text-yellow-400 transition-colors" 
+                                            data-rating="{{ $i }}"
+                                            onclick="setRating({{ $i }})">
+                                        <x-heroicon-s-star class="w-8 h-8" />
+                                    </button>
+                                @endfor
+                            </div>
+                            <input type="hidden" name="rating" id="rating-input" required>
+                            <div id="rating-error" class="text-red-600 text-sm mt-1 hidden">Vui lòng chọn số sao đánh giá.</div>
+                        </div>
+
+                        <!-- Comment -->
+                        <div>
+                            <label for="review-comment" class="block text-sm font-medium text-gray-700 mb-2">Mô tả đánh giá *</label>
+                            <textarea id="review-comment" 
+                                      name="comment" 
+                                      rows="4"
+                                      required
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                      placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."></textarea>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="flex space-x-3 pt-4">
+                            <button type="submit" 
+                                    class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                    id="submit-review-btn">
+                                Gửi đánh giá
+                            </button>
+                            <button type="button" 
+                                    onclick="cancelReview()" 
+                                    class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors font-medium">
+                                Hủy
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        @endauth
         
         @if($product->review_count > 0)
             <!-- Rating Summary -->
@@ -217,6 +279,16 @@
                                             <span class="ml-2 text-sm text-gray-500">{{ $review->created_at->format('d/m/Y') }}</span>
                                         </div>
                                     </div>
+                                    @auth
+                                        @if($review->user_id === Auth::id())
+                                            <div class="flex space-x-2">
+                                                <button class="text-red-600 hover:text-red-700 text-sm font-medium delete-review-btn">
+                                                    <x-heroicon-o-trash class="w-4 h-4 inline mr-1" />
+                                                    Xóa
+                                                </button>
+                                            </div>
+                                        @endif
+                                    @endauth
                                 </div>
                                 @if($review->comment)
                                     <p class="text-gray-700 leading-relaxed">{{ $review->comment }}</p>
@@ -296,6 +368,12 @@
 </div>
 
 <script>
+    let currentRating = 0;
+    let userReview = null;
+    let canReview = false;
+    
+
+
     function changeMainImage(src) {
         document.getElementById('main-image').src = src;
         
@@ -307,6 +385,212 @@
         event.target.closest('[onclick^="changeMainImage"]').classList.add('border-red-500');
         event.target.closest('[onclick^="changeMainImage"]').classList.remove('border-transparent');
     }
+
+    // Review functions
+    function setRating(rating) {
+        currentRating = rating;
+        document.getElementById('rating-input').value = rating;
+        
+        // Update star display
+        const stars = document.querySelectorAll('.star-rating');
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.classList.remove('text-gray-300');
+                star.classList.add('text-yellow-400');
+            } else {
+                star.classList.remove('text-yellow-400');
+                star.classList.add('text-gray-300');
+            }
+        });
+        
+        // Hide error
+        document.getElementById('rating-error').classList.add('hidden');
+    }
+
+    function toggleReviewForm() {
+        // Check if user can review first
+        checkCanReview().then(() => {
+            if (canReview) {
+                const form = document.getElementById('review-form');
+                const button = document.getElementById('review-button');
+                
+                if (form && button && form.classList.contains('hidden')) {
+                    form.classList.remove('hidden');
+                    // Giữ nguyên text button
+                    
+                    // Setup form for new review only
+                    resetForm();
+                    document.getElementById('review-form-element').action = `{{ route('reviews.store', $product->slug) }}`;
+                    document.getElementById('submit-review-btn').textContent = 'Gửi đánh giá';
+                    
+                    // Remove method input if exists
+                    const methodInput = document.querySelector('input[name="_method"]');
+                    if (methodInput) {
+                        methodInput.remove();
+                    }
+                } else {
+                    form.classList.add('hidden');
+                    button.innerHTML = '<svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>Viết đánh giá';
+                    resetForm();
+                }
+            }
+        }).catch(error => {
+            alert('Có lỗi xảy ra. Vui lòng thử lại!');
+        });
+    }
+
+    function cancelReview() {
+        const form = document.getElementById('review-form');
+        const button = document.getElementById('review-button');
+        
+        form.classList.add('hidden');
+        button.innerHTML = '<svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>Viết đánh giá';
+        resetForm();
+    }
+
+    function resetForm() {
+        document.getElementById('review-form-element').reset();
+        currentRating = 0;
+        setRating(0);
+        document.getElementById('rating-input').value = '';
+    }
+
+    async function checkCanReview() {
+        try {
+            const response = await fetch(`{{ route('reviews.can-review', $product->slug) }}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            const data = await response.json();
+            canReview = data.can_review;
+            
+            if (!canReview) {
+                Swal.fire({
+                    title: 'Không thể đánh giá',
+                    text: data.message,
+                    icon: 'info',
+                    confirmButtonColor: '#dc2626'
+                });
+            }
+        } catch (error) {
+            canReview = false;
+        }
+    }
+
+
+
+    async function deleteUserReview() {
+        // Check if SweetAlert2 is loaded
+        let confirmed = false;
+        if (typeof Swal === 'undefined') {
+            confirmed = confirm('Bạn có chắc chắn muốn xóa đánh giá này không?');
+        } else {
+            const result = await Swal.fire({
+                title: 'Xóa đánh giá?',
+                text: 'Bạn có chắc chắn muốn xóa đánh giá này không?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            });
+            confirmed = result.isConfirmed;
+        }
+
+        if (confirmed) {
+            // Tạo form để submit DELETE request
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `{{ route('reviews.destroy', $product->slug) }}`;
+            
+            // Add CSRF token
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            form.appendChild(csrfToken);
+            
+            // Add method override for DELETE
+            const methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            methodField.value = 'DELETE';
+            form.appendChild(methodField);
+            
+            document.body.appendChild(form);
+            
+            // Show loading
+            Swal.fire({
+                title: 'Đang xóa...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Submit form after short delay
+            setTimeout(() => {
+                form.submit();
+            }, 500);
+        }
+    }
+
+    // Handle form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add click listener to review button if it exists
+        const reviewButton = document.getElementById('review-button');
+        if (reviewButton) {
+            reviewButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleReviewForm();
+            });
+        }
+
+        // Only delete buttons need event listeners
+
+        document.querySelectorAll('.delete-review-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                deleteUserReview();
+            });
+        });
+        
+        // No need to check user review status
+        
+        const reviewFormElement = document.getElementById('review-form-element');
+        if (reviewFormElement) {
+            reviewFormElement.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Validate rating
+                if (!currentRating) {
+                    document.getElementById('rating-error').classList.remove('hidden');
+                    return;
+                }
+                
+                // Chuyển sang sử dụng regular form submission thay vì AJAX
+                // để tránh vấn đề với CSRF token và routing
+                const form = this;
+                
+                // Show loading
+                Swal.fire({
+                    title: 'Đang gửi đánh giá...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Submit form normally sau 500ms
+                setTimeout(() => {
+                    form.submit();
+                }, 500);
+            });
+        }
+    });
 
     function increaseQuantity() {
         const input = document.getElementById('quantity-input');

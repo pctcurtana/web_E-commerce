@@ -166,13 +166,13 @@
 
                                     <hr class="my-2 border-gray-100">
 
-                                    <form action="{{ route('logout') }}" method="POST" class="inline-block w-full">
-                                        @csrf
-                                        <button type="submit" class="menu-item flex items-center w-full px-4 py-2 text-red-600 hover:bg-red-50 transition-colors">
-                                            <x-heroicon-o-arrow-right-on-rectangle class="w-5 h-5 mr-3 flex-shrink-0" />
-                                            <span>Đăng xuất</span>
-                                        </button>
-                                    </form>
+                                    <!-- Fallback simple GET logout link -->
+                                    <a href="{{ route('logout.get') }}" 
+                                       onclick="return confirm('Bạn có chắc chắn muốn đăng xuất?')"
+                                       class="menu-item flex items-center w-full px-4 py-2 text-red-600 hover:bg-red-50 transition-colors">
+                                        <x-heroicon-o-arrow-right-on-rectangle class="w-5 h-5 mr-3 flex-shrink-0" />
+                                        <span>Đăng xuất</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -388,6 +388,8 @@
                 title: message
             });
         };
+
+
 
         // Enhanced add to cart function
         window.addToCartWithNotification = function(form) {

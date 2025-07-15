@@ -62,7 +62,7 @@ class AdminController extends Controller
             ->take(5)
             ->get();
 
-        // Recent reviews - Removed (no longer managed in admin)
+
 
         // Recent orders
         $recentOrders = Order::with(['user:id,name,email'])

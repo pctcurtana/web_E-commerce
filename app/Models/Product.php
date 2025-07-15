@@ -70,6 +70,12 @@ class Product extends Model
         return $this->hasMany(Review::class)->approved();
     }
 
+    // Route Key Name - Use slug for route model binding
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
     // Mutators
     public function setNameAttribute($value)
     {

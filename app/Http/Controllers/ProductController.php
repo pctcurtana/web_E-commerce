@@ -139,6 +139,10 @@ class ProductController extends Controller
                 'category:id,name,slug',
                 'approvedReviews' => function($query) {
                     $query->with('user:id,name')
+                          ->when(auth()->check(), function($q) {
+                              // Put current user's review first
+                              $q->orderByRaw('CASE WHEN user_id = ? THEN 0 ELSE 1 END', [auth()->id()]);
+                          })
                           ->latest()
                           ->take(10);
                 }
@@ -220,9 +224,36 @@ class ProductController extends Controller
         // Get all approved reviews with pagination
         $reviews = $product->approvedReviews()
             ->with('user:id,name')
+            ->when(auth()->check(), function($query) {
+                // Put current user's review first
+                $query->orderByRaw('CASE WHEN user_id = ? THEN 0 ELSE 1 END', [auth()->id()]);
+            })
             ->latest()
             ->paginate(10);
 
-        return view('products.reviews', compact('product', 'reviews'));
+        // Get rating statistics
+        $ratingStats = $product->approvedReviews()
+            ->selectRaw('rating, COUNT(*) as count')
+            ->groupBy('rating')
+            ->orderBy('rating', 'desc')
+            ->pluck('count', 'rating')
+            ->toArray();
+
+        // Fill missing ratings with 0
+        for ($i = 1; $i <= 5; $i++) {
+            if (!isset($ratingStats[$i])) {
+                $ratingStats[$i] = 0;
+            }
+        }
+        krsort($ratingStats); // Sort descending
+
+        // Calculate rating percentages
+        $totalReviews = array_sum($ratingStats);
+        $ratingPercentages = [];
+        foreach ($ratingStats as $rating => $count) {
+            $ratingPercentages[$rating] = $totalReviews > 0 ? round(($count / $totalReviews) * 100, 1) : 0;
+        }
+
+        return view('products.reviews', compact('product', 'reviews', 'ratingStats', 'ratingPercentages', 'totalReviews'));
     }
 }

@@ -114,6 +114,15 @@
                                             {{ number_format($item->total) }}đ
                                         </div>
                                     </div>
+                                    @if($order->status === 'delivered')
+                                        <div class="mt-3">
+                                            <a href="{{ route('products.show', $item->product->slug) }}#review-form" 
+                                               class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors">
+                                                <x-heroicon-o-star class="w-3 h-3 mr-1" />
+                                                Đánh giá sản phẩm
+                                            </a>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         @endforeach
@@ -232,9 +241,6 @@
                         <!-- <button class="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">
                             Mua lại
                         </button> -->
-                        <button class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-                            Đánh giá sản phẩm
-                        </button>
                     @endif
                     
                     <a href="{{ route('orders.index') }}" 

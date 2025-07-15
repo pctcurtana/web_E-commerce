@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CategoryController;
@@ -34,10 +35,12 @@ Route::middleware('no.admin')->group(function () {
     Route::get('/category/{slug}', [ProductController::class, 'byCategory'])->name('category.show');
 
     // Clear session intended URL (debug route)
-    Route::get('/clear-session', function() {
-        session()->forget('url.intended');
-        return redirect('/')->with('success', 'Đã xóa session intended URL!');
-    })->name('clear.session');
+Route::get('/clear-session', function() {
+    session()->forget('url.intended');
+    return redirect('/')->with('success', 'Đã xóa session intended URL!');
+})->name('clear.session');
+
+
 
     // Check session intended URL (debug route)
     Route::get('/check-session', function() {
@@ -66,8 +69,23 @@ Route::middleware(['auth', 'no.admin'])->prefix('orders')->name('orders.')->grou
     Route::post('/{order}/cancel', [OrderController::class, 'cancel'])->name('cancel');
 });
 
+// Review routes (require authentication) - Admin KHÔNG được truy cập
+Route::middleware(['auth', 'no.admin'])->prefix('products/{product}')->name('reviews.')->group(function () {
+    Route::get('/can-review', [App\Http\Controllers\ReviewController::class, 'canReview'])->name('can-review');
+    Route::post('/reviews', [App\Http\Controllers\ReviewController::class, 'store'])->name('store');
+    Route::delete('/reviews', [App\Http\Controllers\ReviewController::class, 'destroy'])->name('destroy');
+});
+
 // Auth routes
 require __DIR__.'/auth.php';
+
+// Fallback GET logout route to handle CSRF issues
+Route::get('/logout', function() {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/')->with('success', 'Đã đăng xuất thành công!');
+})->middleware('auth')->name('logout.get');
 
 // Admin Routes - CHỈ admin được truy cập
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -90,4 +108,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     
     // Users - chỉ xem, sửa, xóa (không tạo mới)
     Route::resource('users', App\Http\Controllers\Admin\UserController::class)->except(['create', 'store']);
+    
+
 });
+
+
