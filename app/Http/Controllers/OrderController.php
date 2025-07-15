@@ -67,13 +67,18 @@ class OrderController extends Controller
         $request->validate([
             'billing_name' => 'required|string|max:255',
             'billing_email' => 'required|email',
-            'billing_phone' => 'required|string|max:20',
+            'billing_phone' => 'required|string|max:10|numeric|regex:/^0[0-9]{9}$/',
             'billing_address' => 'required|string',
             'billing_city' => 'required|string|max:100',
             'billing_district' => 'required|string|max:100',
             'billing_ward' => 'required|string|max:100',
             'payment_method' => 'required|in:cod,bank_transfer',
-            'notes' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:500',]
+        ,[
+                
+            'billing_phone.max' => 'Số điện thoại không hợp lệ. Vui lòng nhập đủ 10 số.',
+            'billing_phone.regex' => 'Số điện thoại không hợp lệ. Vui lòng nhập đúng định dạng.',
+            'billing_phone.numeric' => 'Số điện thoại chỉ được chứa các chữ số.',
         ]);
 
         $userId = Auth::id();
