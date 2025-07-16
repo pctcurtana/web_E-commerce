@@ -34,11 +34,12 @@
                         
                         <div>
                             <label for="sku" class="block text-sm font-medium text-gray-700 mb-2">SKU</label>
-                            <input type="text" id="sku" name="sku" value="{{ old('sku') }}"
+                            <input type="text" id="sku" name="sku" value="{{ old('sku') }}" required
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 @error('sku') border-red-500 @enderror">
                             @error('sku')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="mt-1 text-sm text-gray-500">SKU sẽ tự động tạo từ tên sản phẩm nếu bỏ trống</p>
                         </div>
                     </div>
 
@@ -184,26 +185,89 @@
 
 @push('scripts')
 <script>
-// Preview new featured image
-document.getElementById('featured_image').addEventListener('change', function(e) {
-    const file = e.target.files[0];
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-generate SKU based on product name
+    const nameInput = document.getElementById('name');
+    const skuField = document.getElementById('sku');
+    const form = document.querySelector('form');
+    
+    if (nameInput && skuField) {
+        nameInput.addEventListener('input', function(e) {
+            const name = e.target.value;
+            
+            if (name && name.trim() !== '') {
+                // Generate SKU from product name
+                const words = name.trim().split(/\s+/);
+                const initials = words.map(word => {
+                    // Remove special characters and get first letter
+                    const cleaned = word.replace(/[^a-zA-Z0-9\u00C0-\u1EF9]/g, '');
+                    return cleaned.charAt(0).toUpperCase();
+                }).join('');
+                
+                // Add timestamp to ensure uniqueness
+                const timestamp = Date.now().toString().slice(-6);
+                const sku = initials + timestamp;
+                
+                // Only auto-fill if SKU is empty
+                if (!skuField.value.trim()) {
+                    skuField.value = sku;
+                }
+            }
+        });
+    }
+
+    // Ensure SKU is filled before form submission
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!skuField.value.trim()) {
+                e.preventDefault();
+                
+                // Generate SKU from name if name exists
+                if (nameInput.value.trim()) {
+                    const words = nameInput.value.trim().split(/\s+/);
+                    const initials = words.map(word => {
+                        const cleaned = word.replace(/[^a-zA-Z0-9\u00C0-\u1EF9]/g, '');
+                        return cleaned.charAt(0).toUpperCase();
+                    }).join('');
+                    
+                    const timestamp = Date.now().toString().slice(-6);
+                    const sku = initials + timestamp;
+                    skuField.value = sku;
+                    
+                    // Submit form again after generating SKU
+                    this.submit();
+                } else {
+                    alert('Vui lòng nhập tên sản phẩm trước!');
+                }
+            }
+        });
+    }
+
+    // Preview new featured image
+    const featuredImageInput = document.getElementById('featured_image');
     const preview = document.getElementById('featured-image-preview');
     
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.innerHTML = `
-                <div class="relative">
-                    <img src="${e.target.result}" class="w-full h-48 object-cover rounded-lg">
-                    <div class="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 text-xs rounded">
-                        Ảnh đại diện
-                    </div>
-                </div>
-            `;
-        };
-        reader.readAsDataURL(file);
-    } else {
-        preview.innerHTML = '';
+    if (featuredImageInput && preview) {
+        featuredImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `
+                        <div class="relative">
+                            <img src="${e.target.result}" class="w-full h-48 object-cover rounded-lg">
+                            <div class="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 text-xs rounded">
+                                Ảnh đại diện
+                            </div>
+                        </div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = '';
+            }
+        });
     }
 });
 </script>

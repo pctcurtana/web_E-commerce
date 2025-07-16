@@ -144,11 +144,6 @@
                                            class="text-green-600 hover:text-green-900" title="Sửa">
                                             <x-heroicon-o-pencil class="w-5 h-5" />
                                         </a>
-                                        <button type="button" 
-                                                onclick="deleteProduct({{ $product->id }})"
-                                                class="text-red-600 hover:text-red-900" title="Xóa">
-                                            <x-heroicon-o-trash class="w-5 h-5" />
-                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -178,32 +173,4 @@
     </div>
 </div>
 
-<!-- Delete Form (hidden) -->
-<form id="delete-form" method="POST" style="display: none;">
-    @csrf
-    @method('DELETE')
-</form>
 @endsection
-
-@push('scripts')
-<script>
-function deleteProduct(id) {
-    Swal.fire({
-        title: 'Bạn có chắc chắn?',
-        text: "Sản phẩm sẽ bị xóa vĩnh viễn!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Có, xóa nó!',
-        cancelButtonText: 'Hủy'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const form = document.getElementById('delete-form');
-            form.action = `/admin/products/${id}`;
-            form.submit();
-        }
-    });
-}
-</script>
-@endpush

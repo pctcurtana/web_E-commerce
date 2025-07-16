@@ -199,5 +199,8 @@
             });
         };
     </script>
+    
+    <!-- Page Scripts -->
+    @stack('scripts')
 </body>
 </html> 

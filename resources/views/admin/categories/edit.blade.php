@@ -65,7 +65,7 @@
                 </div>
 
                 <!-- Status -->
-                <div>
+                {{-- <div>
                     <label class="flex items-center">
                         <input type="checkbox" 
                                name="is_active" 
@@ -74,7 +74,7 @@
                                class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                         <span class="ml-2 text-sm text-gray-700">Kích hoạt danh mục</span>
                     </label>
-                </div>
+                </div> --}}
 
                 <!-- Submit Buttons -->
                 <div class="flex justify-end space-x-3 pt-6 border-t">

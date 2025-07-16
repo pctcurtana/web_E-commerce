@@ -85,7 +85,7 @@ class ProductController extends Controller
             'short_description' => 'nullable|string|max:500',
             'price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0|lt:price',
-            'sku' => 'nullable|string|max:100|unique:products,sku',
+            'sku' => 'required|string|max:100|unique:products,sku',
             'stock_quantity' => 'nullable|integer|min:0',
             'weight' => 'nullable|numeric|min:0',
             'category_id' => 'required|exists:categories,id',
@@ -95,6 +95,11 @@ class ProductController extends Controller
         ]);
 
         $data = $request->all();
+        
+        // Auto-generate SKU if not provided
+        if (empty($data['sku'])) {
+            $data['sku'] = $this->generateSKU($data['name']);
+        }
         
         // Set slug
         $data['slug'] = Str::slug($data['name']);
@@ -150,7 +155,7 @@ class ProductController extends Controller
             'short_description' => 'nullable|string|max:500',
             'price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0|lt:price',
-            'sku' => 'nullable|string|max:100|unique:products,sku,' . $product->id,
+            'sku' => 'required|string|max:100|unique:products,sku,' . $product->id,
             'stock_quantity' => 'nullable|integer|min:0',
             'weight' => 'nullable|numeric|min:0',
             'category_id' => 'required|exists:categories,id',
@@ -160,6 +165,11 @@ class ProductController extends Controller
         ]);
 
         $data = $request->all();
+        
+        // Auto-generate SKU if not provided and current product doesn't have one
+        if (empty($data['sku']) && empty($product->sku)) {
+            $data['sku'] = $this->generateSKU($data['name']);
+        }
         
         // Update slug only if name changed
         if ($data['name'] !== $product->name) {
@@ -212,6 +222,38 @@ class ProductController extends Controller
     {
         $filename = time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
         return $image->storeAs('products', $filename, 'public');
+    }
+
+    /**
+     * Generate SKU from product name
+     */
+    private function generateSKU($name)
+    {
+        // Generate SKU from product name
+        $words = explode(' ', trim($name));
+        $initials = '';
+        
+        foreach ($words as $word) {
+            // Remove special characters and get first letter
+            $cleaned = preg_replace('/[^a-zA-Z0-9\x{00C0}-\x{1EF9}]/u', '', $word);
+            if (!empty($cleaned)) {
+                $initials .= strtoupper(substr($cleaned, 0, 1));
+            }
+        }
+        
+        // Add timestamp to ensure uniqueness
+        $timestamp = substr(time(), -6);
+        $sku = $initials . $timestamp;
+        
+        // Ensure uniqueness by checking database
+        $originalSku = $sku;
+        $counter = 1;
+        while (Product::where('sku', $sku)->exists()) {
+            $sku = $originalSku . $counter;
+            $counter++;
+        }
+        
+        return $sku;
     }
 
     /**

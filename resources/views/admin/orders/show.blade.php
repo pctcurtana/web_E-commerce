@@ -302,6 +302,7 @@
 </div>
 @endsection 
 
+@push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Update Order Status
@@ -311,7 +312,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const form = this;
         const orderId = form.dataset.orderId;
         const status = form.querySelector('#status').value;
-        const notes = form.querySelector('#notes').value;
+        const notesField = form.querySelector('#notes');
+        const notes = notesField ? notesField.value : '';
         const button = form.querySelector('button[type="submit"]');
         
         // Show loading state
@@ -369,4 +371,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-</script> 
+</script>
+@endpush 
