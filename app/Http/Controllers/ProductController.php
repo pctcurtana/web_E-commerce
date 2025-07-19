@@ -65,23 +65,23 @@ class ProductController extends Controller
                         switch ($stars) {
                             case 5:
                                 // 5 sao: từ 4.5 đến 5.0
-                                $q->orWhereBetween('average_rating', [4.5, 5.0]);
+                                $q->orWhere('average_rating', '=', 5.0);
                                 break;
                             case 4:
                                 // 4 sao: từ 3.5 đến 4.49
-                                $q->orWhereBetween('average_rating', [3.5, 4.49]);
+                                $q->orWhereBetween('average_rating', [4, 4.9]);
                                 break;
                             case 3:
                                 // 3 sao: từ 2.5 đến 3.49
-                                $q->orWhereBetween('average_rating', [2.5, 3.49]);
+                                $q->orWhereBetween('average_rating', [3, 3.9]);
                                 break;
                             case 2:
                                 // 2 sao: từ 1.5 đến 2.49
-                                $q->orWhereBetween('average_rating', [1.5, 2.49]);
+                                $q->orWhereBetween('average_rating', [2, 2.29]);
                                 break;
                             case 1:
                                 // 1 sao: từ 0 đến 1.49
-                                $q->orWhereBetween('average_rating', [0, 1.49]);
+                                $q->orWhereBetween('average_rating', [0, 1.9]);
                                 break;
                         }
                     }

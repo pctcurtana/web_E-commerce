@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Exception;
 
 class OrderController extends Controller
 {
@@ -126,72 +127,145 @@ class OrderController extends Controller
     }
 
     /**
-     * Export orders to CSV
+     * Export orders to CSV with Vietnamese support
      */
     public function export(Request $request)
     {
-        $query = Order::with(['user:id,name,email', 'orderItems']);
+        try {
+            $query = Order::with(['user:id,name,email', 'orderItems']);
 
-        // Apply same filters as index
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhereHas('user', function ($userQuery) use ($search) {
-                      $userQuery->where('name', 'like', "%{$search}%")
-                               ->orWhere('email', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        $orders = $query->latest()->get();
-
-        $filename = 'orders_' . now()->format('Y-m-d_H-i-s') . '.csv';
-        
-        return response()->streamDownload(function () use ($orders) {
-            $handle = fopen('php://output', 'w');
-            
-            // CSV headers
-            fputcsv($handle, [
-                'Mã đơn hàng',
-                'Khách hàng',
-                'Email',
-                'Trạng thái',
-                'Tổng tiền',
-                'Phương thức thanh toán',
-                'Trạng thái thanh toán',
-                'Ngày đặt',
-                'Ghi chú'
-            ]);
-
-            // CSV data
-            foreach ($orders as $order) {
-                fputcsv($handle, [
-                    $order->order_number,
-                    $order->user->name ?? 'Khách vãng lai',
-                    $order->user->email ?? '',
-                    $order->status,
-                    number_format($order->total_amount),
-                    $order->payment_method,
-                    $order->payment_status,
-                    $order->created_at->format('d/m/Y H:i'),
-                    strip_tags($order->notes ?? '')
-                ]);
+            // Apply same filters as index
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('order_number', 'like', "%{$search}%")
+                      ->orWhereHas('user', function ($userQuery) use ($search) {
+                          $userQuery->where('name', 'like', "%{$search}%")
+                                   ->orWhere('email', 'like', "%{$search}%");
+                      });
+                });
             }
 
-            fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->filled('payment_status')) {
+                $query->where('payment_status', $request->payment_status);
+            }
+
+            if ($request->filled('date_from')) {
+                $query->whereDate('created_at', '>=', $request->date_from);
+            }
+            if ($request->filled('date_to')) {
+                $query->whereDate('created_at', '<=', $request->date_to);
+            }
+
+            $orders = $query->latest()->get();
+
+            if ($orders->isEmpty()) {
+                return redirect()->back()->with('warning', 'Không có đơn hàng nào để xuất!');
+            }
+
+            $filename = 'don_hang_' . now()->format('Y-m-d_H-i-s') . '.csv';
+            
+            return response()->streamDownload(function () use ($orders) {
+                $handle = fopen('php://output', 'w');
+                
+                // Add BOM for UTF-8 to ensure proper display in Excel
+                fwrite($handle, "\xEF\xBB\xBF");
+                
+                // CSV headers with Vietnamese support
+                fputcsv($handle, [
+                    'Mã đơn hàng',
+                    'Khách hàng', 
+                    'Email',
+                    'Trạng thái',
+                    'Tổng tiền (VNĐ)',
+                    'Phương thức thanh toán',
+                    'Trạng thái thanh toán',
+                    'Ngày đặt',
+                    'Địa chỉ giao hàng',
+                    'Số điện thoại',
+                    'Ghi chú'
+                ]);
+
+                // CSV data
+                foreach ($orders as $order) {
+                    // Get status in Vietnamese
+                    $statusMap = [
+                        'pending' => 'Chờ xử lý',
+                        'processing' => 'Đang xử lý', 
+                        'shipped' => 'Đã giao vận',
+                        'delivered' => 'Đã giao hàng',
+                        'cancelled' => 'Đã hủy'
+                    ];
+                    
+                    $paymentStatusMap = [
+                        'pending' => 'Chờ thanh toán',
+                        'completed' => 'Đã thanh toán',
+                        'failed' => 'Thanh toán thất bại',
+                        'refunded' => 'Đã hoàn tiền'
+                    ];
+                    
+                    $paymentMethodMap = [
+                        'cod' => 'Thanh toán khi nhận hàng',
+                        'bank_transfer' => 'Chuyển khoản ngân hàng',
+                        'vnpay' => 'VNPay',
+                        'momo' => 'MoMo'
+                    ];
+
+                    // Get shipping address safely
+                    $shippingAddress = '';
+                    $phone = '';
+                    
+                    try {
+                        if ($order->shipping_address) {
+                            $addr = is_array($order->shipping_address) ? $order->shipping_address : json_decode($order->shipping_address, true);
+                            if ($addr && is_array($addr)) {
+                                $shippingAddress = implode(', ', array_filter([
+                                    $addr['address'] ?? '',
+                                    $addr['ward'] ?? '',
+                                    $addr['district'] ?? '', 
+                                    $addr['city'] ?? ''
+                                ]));
+                                $phone = $addr['phone'] ?? '';
+                            }
+                        }
+                        
+                        // Fallback to billing address for phone
+                        if (empty($phone) && $order->billing_address) {
+                            $billing = is_array($order->billing_address) ? $order->billing_address : json_decode($order->billing_address, true);
+                            $phone = $billing['phone'] ?? '';
+                        }
+                    } catch (Exception $e) {
+                        // Ignore JSON parsing errors
+                    }
+
+                    fputcsv($handle, [
+                        $order->order_number ?? '',
+                        $order->user->name ?? 'Khách vãng lai',
+                        $order->user->email ?? '',
+                        $statusMap[$order->status] ?? $order->status,
+                        number_format($order->total_amount, 0, ',', '.'),
+                        $paymentMethodMap[$order->payment_method] ?? $order->payment_method,
+                        $paymentStatusMap[$order->payment_status] ?? $order->payment_status,
+                        $order->created_at ? $order->created_at->format('d/m/Y H:i') : '',
+                        $shippingAddress,
+                        $phone,
+                        strip_tags($order->notes ?? '')
+                    ]);
+                }
+
+                fclose($handle);
+            }, $filename, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+            
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi xuất file: ' . $e->getMessage());
+        }
     }
 
     /**

@@ -154,14 +154,23 @@
 
                                     <!-- Actions -->
                                     <div class="flex items-center space-x-2">
-                                        <a href="{{ route('admin.products.show', $product) }}" 
-                                           class="text-blue-600 hover:text-blue-900">
-                                            <x-heroicon-o-eye class="w-5 h-5"/>
-                                        </a>
-                                        <a href="{{ route('admin.products.edit', $product) }}" 
-                                           class="text-yellow-600 hover:text-yellow-900">
-                                            <x-heroicon-o-pencil class="w-5 h-5"/>
-                                        </a>
+                                        @if($product->id && ($product->slug ?? null))
+                                            <a href="{{ route('admin.products.show', $product) }}" 
+                                               class="text-blue-600 hover:text-blue-900">
+                                                <x-heroicon-o-eye class="w-5 h-5"/>
+                                            </a>
+                                            <a href="{{ route('admin.products.edit', $product) }}" 
+                                               class="text-yellow-600 hover:text-yellow-900">
+                                                <x-heroicon-o-pencil class="w-5 h-5"/>
+                                            </a>
+                                        @else
+                                            <span class="text-gray-400">
+                                                <x-heroicon-o-eye class="w-5 h-5"/>
+                                            </span>
+                                            <span class="text-gray-400">
+                                                <x-heroicon-o-pencil class="w-5 h-5"/>
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

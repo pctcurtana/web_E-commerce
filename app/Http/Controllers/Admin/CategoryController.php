@@ -63,7 +63,7 @@ class CategoryController extends Controller
     public function show(Category $category)
     {
         $category->load(['products' => function ($query) {
-            $query->select('id', 'name', 'price', 'featured_image', 'category_id', 'is_active', 'created_at')
+            $query->select('id', 'name', 'slug', 'price', 'featured_image', 'category_id', 'is_active', 'created_at')
                   ->latest();
         }]);
 

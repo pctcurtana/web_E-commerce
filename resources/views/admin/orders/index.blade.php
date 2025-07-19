@@ -7,9 +7,10 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-semibold text-gray-900">Quản lý Đơn hàng</h1>
         <a href="{{ route('admin.orders.export', request()->query()) }}" 
-           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+           title="Xuất danh sách đơn hàng ra file CSV (hỗ trợ tiếng Việt)">
             <x-heroicon-o-arrow-down-tray class="w-5 h-5 mr-2"/>
-            Xuất Excel
+            Xuất CSV
         </a>
     </div>
 
