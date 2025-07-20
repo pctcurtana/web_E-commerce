@@ -47,7 +47,9 @@
                 </div>
 
                 <div class="text-sm">
-                    <a href="#" class="font-medium text-red-600 hover:text-red-500">
+                    <a href="#" 
+                       onclick="showForgotPasswordAlert(); return false;" 
+                       class="font-medium text-red-600 hover:text-red-500">
                         Quên mật khẩu?
                     </a>
                 </div>
@@ -61,4 +63,97 @@
         </form>
     </div>
 </div>
+
+<script>
+function showForgotPasswordAlert() {
+    Swal.fire({
+        title: 'Quên mật khẩu?',
+        html: `
+            <div class="text-center">
+                <div class="mb-4">
+                    <div class="text-6xl mb-3">📧</div>
+                </div>
+                <p class="text-gray-600 mb-4">
+                    Để lấy lại mật khẩu, vui lòng liên hệ với quản trị viên qua email:
+                </p>
+                <p class="text-lg font-semibold text-blue-600 mb-4 bg-blue-50 px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors" 
+                   onclick="copyEmailToClipboard()" 
+                   title="Click để copy email">
+                    📮 admin@example.com
+                    <small class="block text-xs text-gray-500 mt-1">Click để copy</small>
+                </p>
+                <p class="text-sm text-gray-500">
+                    Chúng tôi sẽ hỗ trợ bạn tạo mật khẩu mới trong thời gian sớm nhất!
+                </p>
+            </div>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#3b82f6',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '📧 Gửi Email',
+        cancelButtonText: '❌ Đóng',
+        customClass: {
+            popup: 'rounded-lg',
+            title: 'text-xl font-bold text-gray-800',
+            content: 'text-gray-600'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Tạo link mailto để mở email client
+            const subject = encodeURIComponent('Yêu cầu đặt lại mật khẩu');
+            const body = encodeURIComponent('Xin chào,\n\nTôi muốn yêu cầu đặt lại mật khẩu cho tài khoản của mình.\n\nThông tin tài khoản:\n- Email: [Nhập email của bạn]\n- Họ tên: [Nhập họ tên của bạn]\n\nXin cảm ơn!');
+            const mailtoLink = `mailto:admin@example.com?subject=${subject}&body=${body}`;
+            
+            window.location.href = mailtoLink;
+            
+            // Hiển thị thông báo thành công
+            Swal.fire({
+                title: 'Đã mở ứng dụng email!',
+                text: 'Vui lòng kiểm tra ứng dụng email của bạn để gửi yêu cầu.',
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        }
+    });
+}
+
+// Function để copy email vào clipboard
+function copyEmailToClipboard() {
+    const email = 'admin@example.com';
+    navigator.clipboard.writeText(email).then(() => {
+        // Hiển thị toast thông báo đã copy
+        Swal.fire({
+            title: 'Đã copy!',
+            text: 'Địa chỉ email đã được copy vào clipboard',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+    }).catch(() => {
+        // Fallback cho trình duyệt cũ
+        const textArea = document.createElement('textarea');
+        textArea.value = email;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        Swal.fire({
+            title: 'Đã copy!',
+            text: 'Địa chỉ email đã được copy',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+    });
+}
+</script>
 @endsection 
