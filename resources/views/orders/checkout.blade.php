@@ -2,6 +2,33 @@
 
 @section('title', 'Thanh toán')
 
+@push('styles')
+<style>
+    /* QR Modal Animation */
+    #qr-payment-modal {
+        transition: opacity 0.3s ease;
+    }
+    
+    #qr-payment-modal:not(.hidden) {
+        opacity: 1;
+    }
+    
+    #qr-payment-modal.hidden {
+        opacity: 0;
+    }
+    
+    /* Modal Content Animation */
+    #qr-payment-modal .bg-white {
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+    }
+    
+    #qr-payment-modal:not(.hidden) .bg-white {
+        transform: scale(1);
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8">
@@ -200,6 +227,87 @@
     </form>
 </div>
 
+<!-- QR Code Payment Popup -->
+<div id="qr-payment-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" style="backdrop-filter: blur(4px);" onclick="closeModalOnBackdrop(event)">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-auto" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200">
+              
+                <p class="text-sm text-gray-600 mt-1">Quét mã QR hoặc chuyển khoản theo thông tin bên dưới</p>
+            </div>
+            
+            <!-- Content -->
+            <div class="px-6 py-6">
+                <!-- QR Code -->
+                <div class="text-center mb-6">
+                    <div class="bg-gray-100 p-2 rounded-lg inline-block">
+                        <img src="{{ asset('images/qrcode.jpg') }}" 
+                             alt="QR Code Payment" 
+                             class="w-24 h-24 mx-auto"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="hidden">
+                            <div class="w-24 h-24 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
+                                QR Code<br>Payment
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bank Info -->
+                <div class="bg-blue-50 p-4 rounded-lg space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Ngân hàng:</span>
+                        <span class="text-sm font-medium">Vietcombank</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Số tài khoản:</span>
+                        <span class="text-sm font-medium">thoihongcantiendau</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Chủ tài khoản:</span>
+                        <span class="text-sm font-medium">Pham Chi That</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Số tiền:</span>
+                        <span class="text-sm font-bold text-red-600" id="payment-amount">{{ number_format($total) }}đ</span>
+                    </div>
+                    <div class="border-t border-blue-200 pt-3">
+                        <span class="text-sm text-gray-600">Nội dung chuyển khoản:</span>
+                        <div class="text-sm font-medium bg-white p-2 rounded mt-1 border">
+                            <span id="order-ref">DH{{ date('YmdHis') }}</span> {{ Auth::user()->name ?? 'KhachHang' }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Instructions -->
+                <div class="mt-4 bg-yellow-50 p-3 rounded-lg">
+                    <p class="text-xs text-yellow-800">
+                        <x-heroicon-o-exclamation-triangle class="w-4 h-4 inline mr-1" />
+                        Vui lòng chuyển khoản đúng số tiền và nội dung để đơn hàng được xử lý nhanh chóng.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex space-x-3">
+                <button type="button" 
+                        onclick="cancelPayment()"
+                        class="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">
+                    <x-heroicon-o-x-mark class="w-4 h-4 inline mr-1" />
+                    Hủy
+                </button>
+                <button type="button" 
+                        onclick="confirmPayment()"
+                        class="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                    <x-heroicon-o-check class="w-4 h-4 inline mr-1" />
+                    Đã thanh toán
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // Province API Integration
     const API_BASE_URL = 'https://vn-public-apis.fpo.vn';
@@ -324,6 +432,63 @@
     document.getElementById('checkout-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
+        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        
+        if (paymentMethod === 'bank_transfer') {
+            // Show QR payment modal
+            showQRPaymentModal();
+        } else {
+            // Normal COD checkout
+            confirmOrder();
+        }
+    });
+    
+    // Show QR Payment Modal
+    function showQRPaymentModal() {
+        document.getElementById('qr-payment-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        
+        // Add ESC key listener
+        document.addEventListener('keydown', handleEscKey);
+    }
+    
+    // Handle ESC key
+    function handleEscKey(event) {
+        if (event.key === 'Escape') {
+            cancelPayment();
+        }
+    }
+    
+    // Cancel Payment (Close Modal)
+    function cancelPayment() {
+        document.getElementById('qr-payment-modal').classList.add('hidden');
+        document.body.style.overflow = 'auto'; // Restore scrolling
+        
+        // Remove ESC key listener
+        document.removeEventListener('keydown', handleEscKey);
+    }
+    
+    // Close modal when clicking on backdrop
+    function closeModalOnBackdrop(event) {
+        if (event.target === event.currentTarget) {
+            cancelPayment();
+        }
+    }
+    
+    // Confirm Payment (Submit Form)
+    function confirmPayment() {
+        document.getElementById('qr-payment-modal').classList.add('hidden');
+        document.body.style.overflow = 'auto'; // Restore scrolling
+        
+        // Remove ESC key listener
+        document.removeEventListener('keydown', handleEscKey);
+        
+        // Submit the form
+        document.getElementById('checkout-form').submit();
+    }
+    
+    // Normal Order Confirmation (for COD)
+    function confirmOrder() {
         Swal.fire({
             title: 'Xác nhận đặt hàng',
             text: 'Bạn có chắc chắn muốn đặt hàng với thông tin đã nhập?',
@@ -335,9 +500,9 @@
             cancelButtonText: 'Hủy bỏ'
         }).then((result) => {
             if (result.isConfirmed) {
-                this.submit();
+                document.getElementById('checkout-form').submit();
             }
         });
-    });
+    }
 </script>
 @endsection 

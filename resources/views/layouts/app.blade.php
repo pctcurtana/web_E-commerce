@@ -79,6 +79,9 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
+    <!-- Page Styles -->
+    @stack('styles')
+    
 </head>
 <body class="bg-gray-50 font-sans antialiased">
     <!-- Header -->

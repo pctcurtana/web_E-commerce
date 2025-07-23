@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate QR Code</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <h3>QR Code Generator for Bank Transfer</h3>
+    <canvas id="qrcode"></canvas>
+    
+    <script>
+        // Bank transfer info
+        const bankInfo = {
+            bank: "MB Bank",
+            account: "0123456789", 
+            accountName: "NGUYEN VAN A",
+            amount: "500000",
+            content: "Thanh toan don hang"
+        };
+        
+        // Generate QR string (you can customize this format)
+        const qrString = `Bank: ${bankInfo.bank}\nAccount: ${bankInfo.account}\nName: ${bankInfo.accountName}\nAmount: ${bankInfo.amount}\nContent: ${bankInfo.content}`;
+        
+        // Generate QR code
+        QRCode.toCanvas(document.getElementById('qrcode'), qrString, {
+            width: 300,
+            height: 300,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        }, function (error) {
+            if (error) console.error(error);
+            console.log('QR Code generated successfully!');
+        });
+    </script>
+    
+    <p>Right-click on the QR code and save as "qr-code-payment.png"</p>
+</body>
+</html>
